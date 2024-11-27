@@ -1,10 +1,23 @@
-const app = require('express')();
+const express = require("express");
+const app = express();
+const path = require("path");
 
-app.listen(3000, () => console.log('Server running'));
 
-app.get('/skills', (req, res) => {
-    res.send({
-        javascript: 10,
-        node: 10
-    });
-})
+// Rotas
+const travelerRoutes = require("./routes/travelerRoutes");
+const infractionRoutes = require("./routes/infractionRoutes");
+
+// Middleware para JSON
+app.use(express.json());
+
+// Definição das rotas
+app.use("/travelers", travelerRoutes);
+app.use("/infractions", infractionRoutes);
+
+// Se o arquivo não for usado em testes, inicie o servidor
+if (require.main === module) {
+  const PORT = 3000;
+  app.listen(PORT, () => console.log(`O servidor está rodando na porta ${PORT}`));
+}
+
+module.exports = app;
