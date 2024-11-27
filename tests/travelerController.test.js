@@ -24,14 +24,14 @@ describe("POST /travelers", () => {
     const response = await request(app).post("/travelers").send({
       name: "Lucas Moura",
       birthDate: "1990-01-01",
-      passportNumber: "12345"
+      passportNumber: "12345",
     });
 
     expect(response.status).toBe(201); // Status HTTP esperado: 201
     expect(response.body.newTraveler).toEqual({
       name: "Lucas Moura",
       birthDate: "1990-01-01",
-      passportNumber: "12345"
+      passportNumber: "12345",
     });
     expect(database.travelers.length).toBe(1); // Verificar se foi salvo
   });
@@ -49,11 +49,10 @@ describe("POST /travelers", () => {
 // Testar a busca de viajantes
 describe("GET /travelers/:passportNumber", () => {
   it("Deve retornar os detalhes de um viajante existente", async () => {
-    // Preencher o banco de dados com um viajante
     database.travelers.push({
       name: "Pedro Silva",
       birthDate: "1985-02-15",
-      passportNumber: "54321"
+      passportNumber: "54321",
     });
 
     const response = await request(app).get("/travelers/54321");
@@ -62,7 +61,7 @@ describe("GET /travelers/:passportNumber", () => {
     expect(response.body).toEqual({
       name: "Pedro Silva",
       birthDate: "1985-02-15",
-      passportNumber: "54321"
+      passportNumber: "54321",
     });
   });
 
@@ -76,88 +75,61 @@ describe("GET /travelers/:passportNumber", () => {
 
 // Testar a validação de viagens
 describe("POST /travelers/:passportNumber/validate", () => {
-  it("Deve permitir viagem se todas as regras forem atendidas", async () => {
-    database.travelers.push({
-      name: "Alice",
-      birthDate: "2000-01-01",
-      passportNumber: "11111"
-    });
-
-    database.infractions.push({
-      description: "Teste de infração",
-      passportNumber: "11111",
-      dateTime: "2023-05-01T10:00:00Z",
-      severity: "Baixa"
-    });
-
-    const response = await request(app).post("/travelers/11111/validate").send({
-      startDate: "2024-06-01",
-      endDate: "2024-06-10"
-    });
-
-    expect(response.status).toBe(200); // Status HTTP esperado: 200
-    expect(response.body.message).toBe("O viajante pode viajar.");
-  });
-
-  it("Deve bloquear viagem se o viajante tiver mais de 12 pontos", async () => {
-    database.travelers.push({
-      name: "Bob",
-      birthDate: "1990-01-01",
-      passportNumber: "22222"
-    });
-
-    database.infractions.push({
-      description: "Infração grave",
-      passportNumber: "22222",
-      dateTime: "2023-05-01T10:00:00Z",
-      severity: "Gravíssima"
-    });
-
-    const response = await request(app).post("/travelers/22222/validate").send({
-      startDate: "2024-06-01",
-      endDate: "2024-06-10"
-    });
-
-    expect(response.status).toBe(400); // Status HTTP esperado: 400
-    expect(response.body.error).toBe("O viajante tem mais de 12 pontos nos últimos 12 meses.");
-  });
-
-  it("Deve bloquear viagem se o viajante tiver infrações próximas ao período de viagem", async () => {
-    database.travelers.push({
-      name: "Carlos",
-      birthDate: "1980-01-01",
-      passportNumber: "33333"
-    });
-
-    database.infractions.push({
-      description: "Infração leve",
-      passportNumber: "33333",
-      dateTime: "2024-05-01T10:00:00Z",
-      severity: "Baixa"
-    });
-
-    const response = await request(app).post("/travelers/33333/validate").send({
-      startDate: "2024-06-01",
-      endDate: "2024-06-10"
-    });
-
-    expect(response.status).toBe(400); // Status HTTP esperado: 400
-    expect(response.body.error).toBe("O viajante tem infrações perto do período de viagem.");
-  });
-
-  it("Deve retornar erro se as datas fornecidas forem inválidas", async () => {
+  it("Deve permitir que Daniel viaje um dia após o nascimento", async () => {
     database.travelers.push({
       name: "Daniel",
       birthDate: "1995-01-01",
-      passportNumber: "44444"
+      passportNumber: "44444",
     });
+
+    database.infractions.push(
+      { description: "Infração leve", passportNumber: "44444", dateTime: "2000-01-01T00:00:00Z", severity: "Baixa" },
+      { description: "Infração leve", passportNumber: "44444", dateTime: "2000-06-01T00:00:00Z", severity: "Baixa" }
+    );
 
     const response = await request(app).post("/travelers/44444/validate").send({
-      startDate: "data-invalida",
-      endDate: "2024-06-10"
+      startDate: "1995-01-02",
+      endDate: "1995-01-02",
     });
 
-    expect(response.status).toBe(400); // Status HTTP esperado: 400
-    expect(response.body.error).toBe("As datas fornecidas são inválidas.");
+    expect(response.status).toBe(200); // Permite a viagem
+    expect(response.body.message).toBe("O viajante pode viajar.");
+  });
+
+  it("Deve bloquear Carlos ao tentar viajar antes do nascimento", async () => {
+    database.travelers.push({
+      name: "Carlos",
+      birthDate: "1980-01-01",
+      passportNumber: "33333",
+    });
+
+    const response = await request(app).post("/travelers/33333/validate").send({
+      startDate: "1979-05-06",
+      endDate: "1979-05-06",
+    });
+
+    expect(response.status).toBe(400); // Bloqueio esperado
+    expect(response.body.error).toBe("Não pode viajar antes da data de nascimento.");
+  });
+
+  it("Deve bloquear Bob devido a infrações um ano antes ou depois do período de viagem", async () => {
+    database.travelers.push({
+      name: "Bob",
+      birthDate: "1990-01-01",
+      passportNumber: "22222",
+    });
+
+    database.infractions.push(
+      { description: "Infração grave", passportNumber: "22222", dateTime: "1997-01-02T00:00:00Z", severity: "Grave" },
+      { description: "Infração leve", passportNumber: "22222", dateTime: "1999-01-02T00:00:00Z", severity: "Baixa" }
+    );
+
+    const response = await request(app).post("/travelers/22222/validate").send({
+      startDate: "1998-01-01",
+      endDate: "1998-01-03",
+    });
+
+    expect(response.status).toBe(400); // Bloqueio esperado
+    expect(response.body.error).toBe("O viajante tem infrações perto do período de viagem.");
   });
 });

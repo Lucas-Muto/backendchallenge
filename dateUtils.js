@@ -1,9 +1,15 @@
 // Verifica se uma data está dentro dos últimos 12 meses
 // Verifica se uma data está dentro dos últimos 12 meses (sempre usando UTC)
   const isWithinLast12Months = (date) => {
+
     const now = new Date(); // Data atual no UTC
-    const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); // Subtração de 1 ano em milissegundos
+    
+    const oneYearAgo = new Date(now); // Subtração de 1 ano em milissegundos
+    oneYearAgo.setUTCFullYear(now.getUTCFullYear() - 1);
+
     const givenDate = new Date(date); // Data fornecida convertida para UTC
+    oneYearAgo.setMilliseconds(0);
+    givenDate.setMilliseconds(0);
 
     // Log para depuração
     console.log("Comparação:", { givenDate, oneYearAgo });

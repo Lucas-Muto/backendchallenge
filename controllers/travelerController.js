@@ -2,7 +2,6 @@ const database = require("../database");
 const Traveler = require("../models/traveler");
 const dateUtils = require("../dateUtils");
 
-
 // Criar um novo viajante
 const createTraveler = (req, res) => {
     const { name, birthDate, passportNumber } = req.body;
@@ -53,23 +52,6 @@ const validateTravel = (req, res) => {
     // Buscar todas as infrações do viajante
     const infractions = database.infractions.filter(i => i.passportNumber === passportNumber);
 
-    // Regra 2: Não pode viajar se houver mais de 12 pontos de infrações nos últimos 12 meses
-    const totalPoints = infractions
-        .filter(i => {
-            const isRecent = dateUtils.isWithinLast12Months(i.dateTime); // Verifica se a infração é recente
-            console.log(`Data: ${i.dateTime}, Recent: ${isRecent}`); // Log detalhado para depuração
-            return isRecent;
-        })
-        .reduce((sum, i) => sum + dateUtils.getSeverityPoints(i.severity), 0);
-
-    console.log("Pontos totais nos últimos 12 meses:", totalPoints); // Log de pontos
-
-    if (totalPoints > 12) {
-        return res.status(400).json({
-            error: `O viajante possui ${totalPoints} pontos acumulados nos últimos 12 meses. O limite é 12 pontos.`,
-        });
-    }
-
     // Regra 3: Não pode viajar se houver infrações um ano antes ou depois do período de viagem
     const hasConflictingInfractions = infractions.some(i =>
         dateUtils.conflictsWithPeriod(i.dateTime, startDate, endDate)
@@ -78,6 +60,27 @@ const validateTravel = (req, res) => {
     if (hasConflictingInfractions) {
         return res.status(400).json({
             error: "O viajante tem infrações perto do período de viagem.",
+        });
+    }
+
+    // Regra 2: Não pode viajar se houver mais de 12 pontos de infrações nos últimos 12 meses
+    const totalPoints = infractions
+        .filter(i => {
+            const isRecent = dateUtils.isWithinLast12Months(i.dateTime); // Verifica se a infração é recente
+            console.log(`Data da infração: ${i.dateTime}, Recent? ${isRecent}`); // Log detalhado para depuração
+            return isRecent;
+        })
+        .reduce((sum, i) => {
+            const points = dateUtils.getSeverityPoints(i.severity);
+            console.log(`Pontos adicionados: ${points}`); // Log de pontos acumulados
+            return sum + points;
+        }, 0);
+
+    console.log("Pontos totais nos últimos 12 meses:", totalPoints); // Log total de pontos
+
+    if (totalPoints > 12) {
+        return res.status(400).json({
+            error: `O viajante possui ${totalPoints} pontos acumulados nos últimos 12 meses. O limite é 12 pontos.`,
         });
     }
 
