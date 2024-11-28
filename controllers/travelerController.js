@@ -1,91 +1,46 @@
-const database = require("../database");
-const Traveler = require("../models/traveler");
-const dateUtils = require("../dateUtils");
+const TravelerService = require("../services/travelerService");
+const { StatusCodes } = require('http-status-codes');
 
-// Criar um novo viajante
 const createTraveler = (req, res) => {
     const { name, birthDate, passportNumber } = req.body;
-
-    if (!name || !birthDate || !passportNumber) {
-        return res.status(400).json({ error: "Todos os campos são necessários." });
+    
+    try {
+        const newTraveler = TravelerService.createTraveler(name, birthDate, passportNumber);
+        res.status(StatusCodes.CREATED).json({ 
+            message: "Viajante criado com sucesso!", 
+            newTraveler 
+        });
+    } catch (error) {
+        res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });
     }
-
-    const newTraveler = new Traveler(name, birthDate, passportNumber);
-    database.travelers.push(newTraveler);
-
-    res.status(201).json({ message: "Viajante criado com sucesso!", newTraveler });
 };
 
-// Obter detalhes de um viajante pelo número do passaporte
 const getTraveler = (req, res) => {
     const { passportNumber } = req.params;
-    const traveler = database.travelers.find(t => t.passportNumber === passportNumber);
+    const traveler = TravelerService.findByPassport(passportNumber);
 
     if (!traveler) {
-        return res.status(404).json({ error: "Viajante não encontrado." });
+        return res.status(StatusCodes.NOT_FOUND).json({ error: "Viajante não encontrado." });
     }
 
-    res.status(200).json(traveler);
+    res.status(StatusCodes.OK).json(traveler);
 };
 
-// Validar se o viajante pode viajar para um período de tempo específico
 const validateTravel = (req, res) => {
     const { passportNumber } = req.params;
     const { startDate, endDate } = req.body;
 
-    // Validação de datas
-    if (!startDate || isNaN(new Date(startDate)) || !endDate || isNaN(new Date(endDate))) {
-        return res.status(400).json({ error: "As datas fornecidas são inválidas." });
-    }
-
-    // Encontrar o viajante no banco de dados
-    const traveler = database.travelers.find(t => t.passportNumber === passportNumber);
+    const traveler = TravelerService.findByPassport(passportNumber);
     if (!traveler) {
-        return res.status(404).json({ error: "Viajante não encontrado." });
+        return res.status(StatusCodes.NOT_FOUND).json({ error: "Viajante não encontrado." });
     }
 
-    // Regra 1: Não pode viajar antes do nascimento
-    if (new Date(startDate) < new Date(traveler.birthDate)) {
-        return res.status(400).json({ error: "Não pode viajar antes da data de nascimento." });
+    try {
+        TravelerService.validateTravelEligibility(traveler, startDate, endDate);
+        res.status(StatusCodes.OK).json({ message: "O viajante pode viajar." });
+    } catch (error) {
+        res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });
     }
-
-    // Buscar todas as infrações do viajante
-    const infractions = database.infractions.filter(i => i.passportNumber === passportNumber);
-
-    // Regra 3: Não pode viajar se houver infrações um ano antes ou depois do período de viagem
-    const hasConflictingInfractions = infractions.some(i =>
-        dateUtils.conflictsWithPeriod(i.dateTime, startDate, endDate)
-    );
-
-    if (hasConflictingInfractions) {
-        return res.status(400).json({
-            error: "O viajante tem infrações perto do período de viagem.",
-        });
-    }
-
-    // Regra 2: Não pode viajar se houver mais de 12 pontos de infrações nos últimos 12 meses
-    const totalPoints = infractions
-        .filter(i => {
-            const isRecent = dateUtils.isWithinLast12Months(i.dateTime); // Verifica se a infração é recente
-            console.log(`Data da infração: ${i.dateTime}, Recent? ${isRecent}`); // Log detalhado para depuração
-            return isRecent;
-        })
-        .reduce((sum, i) => {
-            const points = dateUtils.getSeverityPoints(i.severity);
-            console.log(`Pontos adicionados: ${points}`); // Log de pontos acumulados
-            return sum + points;
-        }, 0);
-
-    console.log("Pontos totais nos últimos 12 meses:", totalPoints); // Log total de pontos
-
-    if (totalPoints > 12) {
-        return res.status(400).json({
-            error: `O viajante possui ${totalPoints} pontos acumulados nos últimos 12 meses. O limite é 12 pontos.`,
-        });
-    }
-
-    // Caso passe por todas as regras, o viajante pode viajar
-    res.status(200).json({ message: "O viajante pode viajar." });
 };
 
 module.exports = {
