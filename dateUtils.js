@@ -21,16 +21,28 @@
   
   // Verifica se uma data de infração conflita com um intervalo de viagem
   const conflictsWithPeriod = (infractionDate, startDate, endDate) => {
-    const oneYearBeforeStart = new Date(startDate); // Data de 1 ano antes do início da viagem
-    const oneYearAfterEnd = new Date(endDate); // Data de 1 ano após o término da viagem
-  
-    // Ajusta as datas para incluir o período de 1 ano antes e depois
-    oneYearBeforeStart.setUTCFullYear(oneYearBeforeStart.getUTCFullYear() - 1);
-    oneYearAfterEnd.setUTCFullYear(oneYearAfterEnd.getUTCFullYear() + 1);
-  
-    const date = new Date(infractionDate); // Data da infração
-    // Retorna true se a data da infração estiver dentro do período de conflito
-    return date >= oneYearBeforeStart && date <= oneYearAfterEnd;
+    const infractionDateTime = new Date(infractionDate);
+    const travelStartDate = new Date(startDate);
+    const travelEndDate = new Date(endDate);
+
+    // Calculate the boundaries (1 year before start and 1 year after end)
+    const oneYearBeforeStart = new Date(travelStartDate);
+    oneYearBeforeStart.setFullYear(travelStartDate.getFullYear() - 1);
+    
+    const oneYearAfterEnd = new Date(travelEndDate);
+    oneYearAfterEnd.setFullYear(travelEndDate.getFullYear() + 1);
+
+    console.log('Checking dates:', {
+      infraction: infractionDateTime,
+      travelStart: travelStartDate,
+      travelEnd: travelEndDate,
+      yearBefore: oneYearBeforeStart,
+      yearAfter: oneYearAfterEnd
+    });
+
+    // Check if the infraction date falls within the restricted period
+    return infractionDateTime >= oneYearBeforeStart && 
+           infractionDateTime <= oneYearAfterEnd;
   };
   
 console.log(isWithinLast12Months("2023-05-01T10:00:00Z")); // Deve retornar true

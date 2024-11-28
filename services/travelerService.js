@@ -18,22 +18,30 @@ class TravelerService {
             i.passportNumber === traveler.passportNumber
         );
 
-        // Regra 3: Verificar infrações próximas ao período
-        const hasConflictingInfractions = infractions.some(i =>
-            dateUtils.conflictsWithPeriod(i.dateTime, startDate, endDate)
-        );
-
-        if (hasConflictingInfractions) {
-            throw new Error("O viajante tem infrações perto do período de viagem.");
-        }
-
         // Regra 2: Verificar pontos nos últimos 12 meses
         const totalPoints = this.calculateRecentInfractionPoints(infractions);
-        
         if (totalPoints > 12) {
             throw new Error(
                 `O viajante possui ${totalPoints} pontos acumulados nos últimos 12 meses. O limite é 12 pontos.`
             );
+        }
+
+        // Regra 3: Verificar infrações próximas ao período
+        const travelStart = new Date(Math.min(new Date(startDate), new Date(endDate)));
+        const travelEnd = new Date(Math.max(new Date(startDate), new Date(endDate)));
+        
+        const hasConflictingInfractions = infractions
+            .filter(i => !dateUtils.isWithinLast12Months(i.dateTime)) // Only consider older infractions
+            .some(infraction => 
+                dateUtils.conflictsWithPeriod(
+                    infraction.dateTime,
+                    travelStart.toISOString().split('T')[0],
+                    travelEnd.toISOString().split('T')[0]
+                )
+            );
+
+        if (hasConflictingInfractions) {
+            throw new Error("O viajante tem infrações perto do período de viagem.");
         }
 
         return true;
@@ -46,8 +54,8 @@ class TravelerService {
     }
 
     static createTraveler(name, birthDate, passportNumber) {
-        // You could add additional business validations here
-        // For example, checking if passport number is unique
+        // Você pode adicionar validações comerciais adicionais aqui
+        // Por exemplo, verificar se o número do passaporte é único
         const existingTraveler = this.findByPassport(passportNumber);
         if (existingTraveler) {
             throw new Error("Já existe um viajante com este número de passaporte.");

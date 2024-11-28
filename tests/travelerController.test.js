@@ -66,7 +66,7 @@ describe("GET /travelers/:passportNumber", () => {
   });
 
   it("Deve retornar erro se o viajante não for encontrado", async () => {
-    const response = await request(app).get("/travelers/99999");
+    const response = await request(app).get("/travelers/54321");
 
     expect(response.status).toBe(404); // Status HTTP esperado: 404
     expect(response.body.error).toBe("Viajante não encontrado.");
@@ -132,4 +132,148 @@ describe("POST /travelers/:passportNumber/validate", () => {
     expect(response.status).toBe(400); // Bloqueio esperado
     expect(response.body.error).toBe("O viajante tem infrações perto do período de viagem.");
   });
+
+  it("Deve permitir que Hugo viaje um dia após seu nascimento", async () => {
+    database.travelers.push({
+      name: "Hugo",
+      birthDate: "2000-07-05",
+      passportNumber: "66666",
+    });
+
+    database.infractions.push(
+      { description: "Infração leve", passportNumber: "66666", dateTime: "2003-02-22T00:00:00Z", severity: "Baixa" },
+      { description: "Infração grave", passportNumber: "66666", dateTime: "2022-05-27T00:00:00Z", severity: "Grave" }
+    );
+
+    const response = await request(app).post("/travelers/66666/validate").send({
+      startDate: "2000-07-06",
+      endDate: "2001-07-06",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe("O viajante pode viajar.");
+  });
+
+  it("Deve bloquear Vigor devido a infrações nos últimos 12 meses", async () => {
+    database.travelers.push({
+      name: "Vigor",
+      birthDate: "2001-02-01",
+      passportNumber: "77777",
+    });
+
+    database.infractions.push(
+      { description: "Infração grave", passportNumber: "77777", dateTime: "2024-04-06T00:00:00Z", severity: "Grave" },
+      { description: "Infração média", passportNumber: "77777", dateTime: "2023-12-30T00:00:00Z", severity: "Média" }
+    );
+
+    const response = await request(app).post("/travelers/77777/validate").send({
+      startDate: "2024-11-28",
+      endDate: "2027-12-05",
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe("O viajante tem infrações perto do período de viagem.");
+  });
+
+  it("Deve bloquear João devido a tentativa de viagem após infração", async () => {
+    database.travelers.push({
+      name: "João",
+      birthDate: "2000-04-08",
+      passportNumber: "99999",
+    });
+
+    database.infractions.push(
+      { description: "Infração grave", passportNumber: "99999", dateTime: "1995-01-02T00:00:00Z", severity: "Grave" },
+      { description: "Infração leve", passportNumber: "99999", dateTime: "2023-04-20T00:00:00Z", severity: "Baixa" }
+    );
+
+    const response = await request(app).post("/travelers/99999/validate").send({
+      startDate: "2001-01-01",
+      endDate: "1996-01-01",
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe("O viajante tem infrações perto do período de viagem.");
+  });
+
+  it("Deve bloquear Vitor devido a tentativa de viagem antes de infração", async () => {
+    database.travelers.push({
+      name: "Vitor",
+      birthDate: "2001-09-02",
+      passportNumber: "98733",
+    });
+
+    database.infractions.push(
+      { description: "Infração grave", passportNumber: "98733", dateTime: "1994-01-02T00:00:00Z", severity: "Grave" },
+      { description: "Infração leve", passportNumber: "98733", dateTime: "2021-04-20T00:00:00Z", severity: "Baixa" }
+    );
+
+    const response = await request(app).post("/travelers/98733/validate").send({
+      startDate: "2003-02-05",
+      endDate: "1993-01-01",
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe("O viajante tem infrações perto do período de viagem.");
+  });
+
+  it("Deve permitir que Kabib viaje com exatamente 12 pontos de infrações", async () => {
+    database.travelers.push({
+      name: "Kabib",
+      birthDate: "1973-09-05",
+      passportNumber: "90909",
+    });
+
+    database.infractions.push(
+      { description: "Infração grave", passportNumber: "90909", dateTime: "2024-06-06T00:00:00Z", severity: "Grave" },
+      { description: "Infração média", passportNumber: "90909", dateTime: "2023-12-30T00:00:00Z", severity: "Média" }
+    );
+
+    const response = await request(app).post("/travelers/90909/validate").send({
+      startDate: "2024-11-28",
+      endDate: "2032-11-07",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe("O viajante pode viajar.");
+  });
+
+  it("Deve bloquear Jesus devido a ter mais de 12 pontos em infrações", async () => {
+    database.travelers.push({
+      name: "Jesus",
+      birthDate: "1976-08-06",
+      passportNumber: "80808",
+    });
+
+    database.infractions.push(
+      { description: "Infração gravíssima", passportNumber: "80808", dateTime: "2024-04-04T00:00:00Z", severity: "Gravíssima" },
+      { description: "Infração leve", passportNumber: "80808", dateTime: "2024-02-01T00:00:00Z", severity: "Baixa" }
+    );
+
+    const response = await request(app).post("/travelers/80808/validate").send({
+      startDate: "2024-11-28",
+      endDate: "2050-07-11",
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe("O viajante possui 15 pontos acumulados nos últimos 12 meses. O limite é 12 pontos.");
+  });
 });
+
+// Verifica se uma data de infração conflita com um intervalo de viagem
+const conflictsWithPeriod = (infractionDate, startDate, endDate) => {
+  const infractionDateTime = new Date(infractionDate);
+  const travelStartDate = new Date(startDate);
+  const travelEndDate = new Date(endDate);
+
+  // Calcular os limites (1 ano antes do início e 1 ano depois do fim)
+  const oneYearBeforeStart = new Date(travelStartDate);
+  oneYearBeforeStart.setFullYear(travelStartDate.getFullYear() - 1);
+  
+  const oneYearAfterEnd = new Date(travelEndDate);
+  oneYearAfterEnd.setFullYear(travelEndDate.getFullYear() + 1);
+
+  // Verificar se a data da infração está dentro do período restrito
+  return infractionDateTime >= oneYearBeforeStart && 
+         infractionDateTime <= oneYearAfterEnd;
+};
