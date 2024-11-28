@@ -19,19 +19,6 @@
   
   
   
-  // Retorna a quantidade de pontos de uma infração com base na gravidade
-  const getSeverityPoints = (severity) => {
-    // Mapeamento de gravidade para pontos
-    const points = {
-      "Baixa": 3,
-      "Média": 5,
-      "Grave": 7,
-      "Gravíssima": 12,
-    };
-  
-    return points[severity] || 0; // Retorna os pontos associados ou 0 se a gravidade for inválida
-  };
-  
   // Verifica se uma data de infração conflita com um intervalo de viagem
   const conflictsWithPeriod = (infractionDate, startDate, endDate) => {
     const oneYearBeforeStart = new Date(startDate); // Data de 1 ano antes do início da viagem
@@ -51,5 +38,5 @@ console.log(isWithinLast12Months("2022-11-27T10:00:00Z")); // Deve retornar fals
 console.log(isWithinLast12Months("2024-01-01T10:00:00Z")); // Deve retornar true
 
   // Exporta as funções para serem usadas em outros módulos
-  module.exports = { isWithinLast12Months, getSeverityPoints, conflictsWithPeriod };
+  module.exports = { isWithinLast12Months, conflictsWithPeriod };
   
