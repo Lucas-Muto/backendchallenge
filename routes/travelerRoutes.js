@@ -4,6 +4,8 @@ const { createTraveler, getTraveler, validateTravel } = require("../controllers/
 const { validateCreateTraveler, validateTravelDates } = require("../middlewares/travelerValidations");
 
 router.post("/", validateCreateTraveler, createTraveler);
+// router.delete("/:passportNumber", deleteTraveler);
+// router.put("/:passportNumber", updateTraveler);
 router.get("/:passportNumber", getTraveler);
 router.post("/:passportNumber/validate", validateTravelDates, validateTravel);
 

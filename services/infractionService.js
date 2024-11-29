@@ -1,20 +1,21 @@
-const database = require("../database");
-const Infraction = require("../models/infraction");
-const dateUtils = require("../dateUtils");
+const prisma = require('../prisma/client');
 
 class InfractionService {
-    static createInfraction(description, passportNumber, dateTime, severity) {
-        if (!description || !passportNumber || !dateTime || !severity) {
-            throw new Error("Todos os campos são necessários.");
-        }
-
-        const newInfraction = new Infraction(description, passportNumber, dateTime, severity);
-        database.infractions.push(newInfraction);
-        return newInfraction;
+    static async createInfraction(description, passportNumber, dateTime, severity) {
+        return prisma.infraction.create({
+            data: {
+                description,
+                passportNumber,
+                dateTime: new Date(dateTime),
+                severity
+            }
+        });
     }
 
-    static findByPassport(passportNumber) {
-        return database.infractions.filter(i => i.passportNumber === passportNumber);
+    static async findByPassport(passportNumber) {
+        return prisma.infraction.findMany({
+            where: { passportNumber }
+        });
     }
 
     static getSeverityPoints(severity) {

@@ -4,31 +4,30 @@ const { StatusCodes } = require('http-status-codes');
 const createInfraction = (req, res) => {
     const { description, passportNumber, dateTime, severity } = req.body;
     
-    try {
-        const newInfraction = InfractionService.createInfraction(
+    InfractionService.createInfraction(
             description, 
             passportNumber, 
             dateTime, 
             severity
-        );
-        res.status(StatusCodes.CREATED).json({ 
-            message: "Infração criada com sucesso!", 
-            newInfraction 
+        ).then(newInfraction => {
+            res.status(StatusCodes.CREATED).json({ 
+                message: "Infração criada com sucesso!", 
+                newInfraction 
+            });
+        }).catch(error => {
+            res.status(StatusCodes.BAD_REQUEST).json({ error: `Houve um erro ao criar a infração: ${error.message}` });
         });
-    } catch (error) {
-        res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });
-    }
+   
 };
 
 const getInfractionsByTraveler = (req, res) => {
     const { passportNumber } = req.params;
     
-    try {
-        const infractions = InfractionService.findByPassport(passportNumber);
+    InfractionService.findByPassport(passportNumber).then(infractions => {
         res.status(StatusCodes.OK).json(infractions);
-    } catch (error) {
-        res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });
-    }
+    }).catch(error => {
+        res.status(StatusCodes.BAD_REQUEST).json({ error: `Houve um erro ao buscar as infrações: ${error.message}` });
+    });
 };
 
 module.exports = { createInfraction, getInfractionsByTraveler };

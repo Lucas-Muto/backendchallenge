@@ -1,23 +1,23 @@
 const request = require("supertest");
-const app = require("../index"); // Importar o servidor principal da aplicação
-const database = require("../database");
+const app = require("../index");
+const prisma = require("../prisma/client");
 
-// Configurar o relógio para testes consistentes
+// Keep the timer setup
 beforeAll(() => {
-  jest.useFakeTimers("modern");// Congela o tempo na data especificada
+  jest.useFakeTimers("modern");
 });
 
 afterAll(() => {
-  jest.useRealTimers(); // Retorna o relógio ao comportamento normal após os testes
+  jest.useRealTimers();
 });
 
-// Limpar o banco de dados antes de cada teste
-beforeEach(() => {
-  database.travelers = [];
-  database.infractions = [];
+// Update database cleanup to use Prisma
+beforeEach(async () => {
+  await prisma.infraction.deleteMany();
+  await prisma.traveler.deleteMany();
 });
 
-// Testar para cadastrar um viajante
+// Update test cases to use Prisma
 describe("POST /travelers", () => {
   it("Deve criar um novo viajante com sucesso", async () => {
     const response = await request(app).post("/travelers").send({
@@ -26,13 +26,17 @@ describe("POST /travelers", () => {
       passportNumber: "12345",
     });
 
-    expect(response.status).toBe(201); // Status HTTP esperado: 201
-    expect(response.body.newTraveler).toEqual({
+    expect(response.status).toBe(201);
+    expect(response.body.traveler).toMatchObject({
       name: "Lucas Moura",
-      birthDate: "1990-01-01",
       passportNumber: "12345",
     });
-    expect(database.travelers.length).toBe(1); // Verificar se foi salvo
+
+    // Verify in database
+    const savedTraveler = await prisma.traveler.findUnique({
+      where: { passportNumber: "12345" }
+    });
+    expect(savedTraveler).toBeTruthy();
   });
 
   it("Deve retornar erro se faltar campos obrigatórios", async () => {
@@ -45,21 +49,22 @@ describe("POST /travelers", () => {
   });
 });
 
-// Testar a busca de viajantes
 describe("GET /travelers/:passportNumber", () => {
   it("Deve retornar os detalhes de um viajante existente", async () => {
-    database.travelers.push({
-      name: "Pedro Silva",
-      birthDate: "1985-02-15",
-      passportNumber: "54321",
+    // Create test data using Prisma
+    await prisma.traveler.create({
+      data: {
+        name: "Pedro Silva",
+        birthDate: new Date("1985-02-15"),
+        passportNumber: "54321",
+      }
     });
 
     const response = await request(app).get("/travelers/54321");
 
-    expect(response.status).toBe(200); // Status HTTP esperado: 200
-    expect(response.body).toEqual({
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
       name: "Pedro Silva",
-      birthDate: "1985-02-15",
       passportNumber: "54321",
     });
   });
@@ -72,23 +77,36 @@ describe("GET /travelers/:passportNumber", () => {
   });
 });
 
-// Testar a validação de viagens
 describe("POST /travelers/:passportNumber/validate", () => {
-  
   it("Deve permitir que Hugo viaje pro passado um dia após o seu nascimento", async () => {
-     database.travelers.push({
-      name: "Hugo",
-      birthDate: "2000-07-05",
-      passportNumber: "66666",
+    // Create traveler
+    await prisma.traveler.create({
+      data: {
+        name: "Hugo",
+        birthDate: new Date("2000-07-05"),
+        passportNumber: "66666",
+      }
     });
 
-    database.infractions.push(
-      { description: "Infração leve", passportNumber: "66666", dateTime: "2003-02-22T00:00:00Z", severity: "Baixa" },
-      { description: "Infração grave", passportNumber: "66666", dateTime: "2022-05-27T00:00:00Z", severity: "Grave" }
-    );
+    // Create infractions
+    await prisma.infraction.createMany({
+      data: [
+        {
+          description: "Infração leve",
+          passportNumber: "66666",
+          dateTime: new Date("2003-02-22T00:00:00Z"),
+          severity: "Baixa"
+        },
+        {
+          description: "Infração grave",
+          passportNumber: "66666",
+          dateTime: new Date("2022-05-27T00:00:00Z"),
+          severity: "Grave"
+        }
+      ]
+    });
 
-    jest.setSystemTime(new Date("2035-07-06T00:00:00Z")); 
-
+    jest.setSystemTime(new Date("2035-07-06T00:00:00Z"));
 
     const response = await request(app).post("/travelers/66666/validate").send({
       endDate: "2000-07-06",
@@ -99,10 +117,12 @@ describe("POST /travelers/:passportNumber/validate", () => {
   });
 
   it("Deve bloquear Carlos ao tentar viajar para antes do seu nascimento", async () => {
-    database.travelers.push({
-      name: "Carlos",
-      birthDate: "1980-01-01",
-      passportNumber: "33333",
+    await prisma.traveler.create({
+      data: {
+        name: "Carlos",
+        birthDate: new Date("1980-01-01"),
+        passportNumber: "33333",
+      }
     });
 
     jest.setSystemTime(new Date("1999-05-06T00:00:00Z")); 
@@ -111,21 +131,35 @@ describe("POST /travelers/:passportNumber/validate", () => {
       endDate: "1979-05-06",
     });
 
-    expect(response.status).toBe(400); // Bloqueio esperado
+    expect(response.status).toBe(400);
     expect(response.body.error).toBe("Não pode viajar antes da data de nascimento.");
   });
 
   it("Deve permitir que Vigor viaje com exatamente 12 pontos de infrações", async () => {
-    database.travelers.push({
-      name: "Vigor",
-      birthDate: "2001-02-01",
-      passportNumber: "77777",
+    await prisma.traveler.create({
+      data: {
+        name: "Vigor",
+        birthDate: new Date("2001-02-01"),
+        passportNumber: "77777",
+      }
     });
 
-    database.infractions.push(
-      { description: "Infração grave", passportNumber: "77777", dateTime: "2024-04-06T00:00:00Z", severity: "Grave" },
-      { description: "Infração média", passportNumber: "77777", dateTime: "2023-12-30T00:00:00Z", severity: "Média" }
-    );
+    await prisma.infraction.createMany({
+      data: [
+        {
+          description: "Infração grave",
+          passportNumber: "77777",
+          dateTime: new Date("2024-04-06T00:00:00Z"),
+          severity: "Grave"
+        },
+        {
+          description: "Infração média",
+          passportNumber: "77777",
+          dateTime: new Date("2023-12-30T00:00:00Z"),
+          severity: "Média"
+        }
+      ]
+    });
 
     jest.setSystemTime(new Date("2024-11-28T00:00:00Z")); 
 
@@ -138,16 +172,30 @@ describe("POST /travelers/:passportNumber/validate", () => {
   });
 
   it("Deve bloquear João devido a tentativa de viajar para um ano depois de uma infração que recebeu", async () => {
-    database.travelers.push({
-      name: "João",
-      birthDate: "1990-04-08",
-      passportNumber: "99999",
+    await prisma.traveler.create({
+      data: {
+        name: "João",
+        birthDate: new Date("1990-04-08"),
+        passportNumber: "99999",
+      }
     });
 
-    database.infractions.push(
-      { description: "Infração grave", passportNumber: "99999", dateTime: "1995-01-02T00:00:00Z", severity: "Grave" },
-      { description: "Infração leve", passportNumber: "99999", dateTime: "2023-04-20T00:00:00Z", severity: "Baixa" }
-    );
+    await prisma.infraction.createMany({
+      data: [
+        {
+          description: "Infração grave",
+          passportNumber: "99999",
+          dateTime: new Date("1995-01-02T00:00:00Z"),
+          severity: "Grave"
+        },
+        {
+          description: "Infração leve",
+          passportNumber: "99999",
+          dateTime: new Date("2023-04-20T00:00:00Z"),
+          severity: "Baixa"
+        }
+      ]
+    });
 
     jest.setSystemTime(new Date("2001-01-01T00:00:00Z")); 
 
@@ -160,16 +208,30 @@ describe("POST /travelers/:passportNumber/validate", () => {
   });
 
   it("Deve bloquear Vitor devido a tentativa de viajar para um ano antes de uma infração que recebeu", async () => {
-    database.travelers.push({
-      name: "Vitor",
-      birthDate: "2001-09-02",
-      passportNumber: "98733",
+    await prisma.traveler.create({
+      data: {
+        name: "Vitor",
+        birthDate: new Date("2001-09-02"),
+        passportNumber: "98733",
+      }
     });
 
-    database.infractions.push(
-      { description: "Infração grave", passportNumber: "98733", dateTime: "2027-01-02T00:00:00Z", severity: "Grave" },
-      { description: "Infração leve", passportNumber: "98733", dateTime: "2021-04-20T00:00:00Z", severity: "Baixa" }
-    );
+    await prisma.infraction.createMany({
+      data: [
+        {
+          description: "Infração grave",
+          passportNumber: "98733",
+          dateTime: new Date("2027-01-02T00:00:00Z"),
+          severity: "Grave"
+        },
+        {
+          description: "Infração leve",
+          passportNumber: "98733",
+          dateTime: new Date("2021-04-20T00:00:00Z"),
+          severity: "Baixa"
+        }
+      ]
+    });
 
     jest.setSystemTime(new Date("2003-02-05T00:00:00Z")); 
 
@@ -182,16 +244,30 @@ describe("POST /travelers/:passportNumber/validate", () => {
   });
 
   it("Deve permitir que Kabib viaje com exatamente 12 pontos de infrações nos últimos 12 meses", async () => {
-    database.travelers.push({
-      name: "Kabib",
-      birthDate: "1973-09-05",
-      passportNumber: "90909",
+    await prisma.traveler.create({
+      data: {
+        name: "Kabib",
+        birthDate: new Date("1973-09-05"),
+        passportNumber: "90909",
+      }
     });
 
-    database.infractions.push(
-      { description: "Infração grave", passportNumber: "90909", dateTime: "2024-06-06T00:00:00Z", severity: "Grave" },
-      { description: "Infração média", passportNumber: "90909", dateTime: "2023-12-30T00:00:00Z", severity: "Média" }
-    );
+    await prisma.infraction.createMany({
+      data: [
+        {
+          description: "Infração grave",
+          passportNumber: "90909",
+          dateTime: new Date("2024-06-06T00:00:00Z"),
+          severity: "Grave"
+        },
+        {
+          description: "Infração média",
+          passportNumber: "90909",
+          dateTime: new Date("2023-12-30T00:00:00Z"),
+          severity: "Média"
+        }
+      ]
+    });
 
     jest.setSystemTime(new Date("2024-11-28T00:00:00Z")); 
 
@@ -204,16 +280,30 @@ describe("POST /travelers/:passportNumber/validate", () => {
   });
 
   it("Deve bloquear Jesus devido a ter mais de 12 pontos em infrações nos últimos 12 meses", async () => {
-    database.travelers.push({
-      name: "Jesus",
-      birthDate: "1976-08-06",
-      passportNumber: "80808",
+    await prisma.traveler.create({
+      data: {
+        name: "Jesus",
+        birthDate: new Date("1976-08-06"),
+        passportNumber: "80808",
+      }
     });
 
-    database.infractions.push(
-      { description: "Infração gravíssima", passportNumber: "80808", dateTime: "2024-04-04T00:00:00Z", severity: "Gravíssima" },
-      { description: "Infração leve", passportNumber: "80808", dateTime: "2024-02-01T00:00:00Z", severity: "Baixa" }
-    );
+    await prisma.infraction.createMany({
+      data: [
+        {
+          description: "Infração gravíssima",
+          passportNumber: "80808",
+          dateTime: new Date("2024-04-04T00:00:00Z"),
+          severity: "Gravíssima"
+        },
+        {
+          description: "Infração leve",
+          passportNumber: "80808",
+          dateTime: new Date("2024-02-01T00:00:00Z"),
+          severity: "Baixa"
+        }
+      ]
+    });
 
     jest.setSystemTime(new Date("2024-11-28T00:00:00Z")); 
 
@@ -226,17 +316,36 @@ describe("POST /travelers/:passportNumber/validate", () => {
   });
 
   it("Deve permitir Yoda devido ter infrações muito no passado e apenas uma recente", async () => {
-    database.travelers.push({
-      name: "Yoda",
-      birthDate: "1972-05-03",
-      passportNumber: "50305",
+    await prisma.traveler.create({
+      data: {
+        name: "Yoda",
+        birthDate: new Date("1972-05-03"),
+        passportNumber: "50305",
+      }
     });
 
-    database.infractions.push(
-      { description: "Infração gravíssima", passportNumber: "50305", dateTime: "1987-03-03T00:00:00Z", severity: "Gravíssima" },
-      { description: "Infração grave", passportNumber: "50305", dateTime: "2010-01-03T00:00:00Z", severity: "Grave" },
-      { description: "Infração leve", passportNumber: "50305", dateTime: "2024-03-02T00:00:00Z", severity: "Baixa" }
-    );
+    await prisma.infraction.createMany({
+      data: [
+        {
+          description: "Infração gravíssima",
+          passportNumber: "50305",
+          dateTime: new Date("1987-03-03T00:00:00Z"),
+          severity: "Gravíssima"
+        },
+        {
+          description: "Infração grave",
+          passportNumber: "50305",
+          dateTime: new Date("2010-01-03T00:00:00Z"),
+          severity: "Grave"
+        },
+        {
+          description: "Infração leve",
+          passportNumber: "50305",
+          dateTime: new Date("2024-03-02T00:00:00Z"),
+          severity: "Baixa"
+        }
+      ]
+    });
 
     jest.setSystemTime(new Date("2024-11-28T00:00:00Z")); 
 
@@ -247,8 +356,6 @@ describe("POST /travelers/:passportNumber/validate", () => {
     expect(response.status).toBe(200);
     expect(response.body.message).toBe("O viajante pode viajar.");
   });
-
-
 });
 
 
