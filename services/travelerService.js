@@ -8,15 +8,20 @@ class TravelerService {
         return database.travelers.find(t => t.passportNumber === passportNumber);
     }
 
-    static validateTravelEligibility(traveler, startDate, endDate) {
-        // Regra 1: Não pode viajar antes do nascimento
-        if (new Date(startDate) < new Date(traveler.birthDate)) {
+    static getTravelerInfractions(passportNumber) {
+        return database.infractions.filter(i => i.passportNumber === passportNumber);
+    }
+
+    static validateTravelEligibility(traveler, endDate) {
+        const birthDate = new Date(traveler.birthDate);
+        const travelEnd = new Date(endDate);
+        
+        // Regra 1: Não pode viajar antes do nascimento (checking both dates)
+        if (travelEnd < birthDate) {
             throw new Error("Não pode viajar antes da data de nascimento.");
         }
 
-        const infractions = database.infractions.filter(i => 
-            i.passportNumber === traveler.passportNumber
-        );
+        const infractions = this.getTravelerInfractions(traveler.passportNumber);
 
         // Regra 2: Verificar pontos nos últimos 12 meses
         const totalPoints = this.calculateRecentInfractionPoints(infractions);
@@ -27,15 +32,13 @@ class TravelerService {
         }
 
         // Regra 3: Verificar infrações próximas ao período
-        const travelStart = new Date(Math.min(new Date(startDate), new Date(endDate)));
-        const travelEnd = new Date(Math.max(new Date(startDate), new Date(endDate)));
-        
-        const hasConflictingInfractions = infractions
-            .filter(i => !dateUtils.isWithinLast12Months(i.dateTime)) // Only consider older infractions
+        const infractionsNotWithinLast12Months = infractions
+            .filter(i => !dateUtils.isWithinLast12Months(i.dateTime));
+
+        const hasConflictingInfractions = infractionsNotWithinLast12Months
             .some(infraction => 
-                dateUtils.conflictsWithPeriod(
+                this.conflictsWithPeriod(
                     infraction.dateTime,
-                    travelStart.toISOString().split('T')[0],
                     travelEnd.toISOString().split('T')[0]
                 )
             );
@@ -46,6 +49,25 @@ class TravelerService {
 
         return true;
     }
+
+    // Verifica se uma data de infração conflita com um intervalo de viagem
+    //O viajante não pode viajar se tiver cometido qualquer tipo de infração um ano antes ou depois do período desejado.
+    static conflictsWithPeriod = (infractionDate, endDate) => {
+        const infractionDateTime = new Date(infractionDate);
+        const travelEndDate = new Date(endDate);
+    
+        // Calculate the boundaries (1 year before start and 1 year after end)
+        const oneYearBeforeEnd = new Date(travelEndDate);
+        oneYearBeforeEnd.setFullYear(travelEndDate.getFullYear() - 1);
+        
+        const oneYearAfterEnd = new Date(travelEndDate);
+        oneYearAfterEnd.setFullYear(travelEndDate.getFullYear() + 1);
+    
+        // Check if the infraction date falls within the restricted period
+        const isConflicted =  infractionDateTime >= oneYearBeforeEnd && infractionDateTime <= oneYearAfterEnd;
+        
+        return isConflicted;
+      }; 
 
     static calculateRecentInfractionPoints(infractions) {
         return infractions

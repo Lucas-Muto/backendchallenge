@@ -28,7 +28,7 @@ const getTraveler = (req, res) => {
 
 const validateTravel = (req, res) => {
     const { passportNumber } = req.params;
-    const { startDate, endDate } = req.body;
+    const { endDate } = req.body;
 
     const traveler = TravelerService.findByPassport(passportNumber);
     if (!traveler) {
@@ -36,7 +36,7 @@ const validateTravel = (req, res) => {
     }
 
     try {
-        TravelerService.validateTravelEligibility(traveler, startDate, endDate);
+        TravelerService.validateTravelEligibility(traveler, endDate);
         res.status(StatusCodes.OK).json({ message: "O viajante pode viajar." });
     } catch (error) {
         res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });

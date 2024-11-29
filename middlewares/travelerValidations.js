@@ -13,11 +13,11 @@ const validateCreateTraveler = (req, res, next) => {
 };
 
 const validateTravelDates = (req, res, next) => {
-    const { startDate, endDate } = req.body;
+    const { endDate } = req.body;
 
-    if (!startDate || isNaN(new Date(startDate)) || !endDate || isNaN(new Date(endDate))) {
+    if (!endDate || isNaN(new Date(endDate))) {
         return res.status(StatusCodes.BAD_REQUEST).json({ 
-            error: "As datas fornecidas são inválidas." 
+            error: "A data fornecida é inválida." 
         });
     }
 
