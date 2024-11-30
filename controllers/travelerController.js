@@ -46,8 +46,44 @@ const validateTravel = (req, res) => {
     });
 };
 
+const updateTraveler = async (req, res) => {
+    const { passportNumber } = req.params;
+    const updateData = req.body;
+
+    try {
+        const updatedTraveler = await TravelerService.updateTraveler(passportNumber, updateData);
+        res.status(StatusCodes.OK).json({
+            message: "Viajante atualizado com sucesso!",
+            traveler: updatedTraveler
+        });
+    } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(StatusCodes.NOT_FOUND).json({ error: "Viajante não encontrado." });
+        }
+        res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });
+    }
+};
+
+const deleteTraveler = async (req, res) => {
+    const { passportNumber } = req.params;
+
+    try {
+        await TravelerService.deleteTraveler(passportNumber);
+        res.status(StatusCodes.OK).json({
+            message: "Viajante removido com sucesso!"
+        });
+    } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(StatusCodes.NOT_FOUND).json({ error: "Viajante não encontrado." });
+        }
+        res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });
+    }
+};
+
 module.exports = {
     createTraveler,
     getTraveler,
     validateTravel,
+    updateTraveler,
+    deleteTraveler
 };

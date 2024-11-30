@@ -79,6 +79,28 @@ class TravelerService {
         
         return isConflicted;
       }; 
+
+    static async updateTraveler(passportNumber, data) {
+        return prisma.traveler.update({
+            where: { passportNumber },
+            data: {
+                name: data.name,
+                birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
+            }
+        });
+    }
+
+    static async deleteTraveler(passportNumber) {
+        // First delete related infractions
+        await prisma.infraction.deleteMany({
+            where: { passportNumber }
+        });
+
+        // Then delete the traveler
+        return prisma.traveler.delete({
+            where: { passportNumber }
+        });
+    }
 }
 
 module.exports = TravelerService; 

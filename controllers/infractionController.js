@@ -30,4 +30,43 @@ const getInfractionsByTraveler = (req, res) => {
     });
 };
 
-module.exports = { createInfraction, getInfractionsByTraveler };
+const updateInfraction = async (req, res) => {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    try {
+        const updatedInfraction = await InfractionService.updateInfraction(parseInt(id), updateData);
+        res.status(StatusCodes.OK).json({
+            message: "Infração atualizada com sucesso!",
+            infraction: updatedInfraction
+        });
+    } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(StatusCodes.NOT_FOUND).json({ error: "Infração não encontrada." });
+        }
+        res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });
+    }
+};
+
+const deleteInfraction = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        await InfractionService.deleteInfraction(parseInt(id));
+        res.status(StatusCodes.OK).json({
+            message: "Infração removida com sucesso!"
+        });
+    } catch (error) {
+        if (error.code === 'P2025') {
+            return res.status(StatusCodes.NOT_FOUND).json({ error: "Infração não encontrada." });
+        }
+        res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });
+    }
+};
+
+module.exports = { 
+    createInfraction, 
+    getInfractionsByTraveler,
+    updateInfraction,
+    deleteInfraction 
+};

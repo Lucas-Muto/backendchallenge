@@ -28,6 +28,23 @@ class InfractionService {
     
         return points[severity] || 0;
     }
+
+    static async updateInfraction(id, data) {
+        return prisma.infraction.update({
+            where: { id },
+            data: {
+                description: data.description,
+                dateTime: data.dateTime ? new Date(data.dateTime) : undefined,
+                severity: data.severity
+            }
+        });
+    }
+
+    static async deleteInfraction(id) {
+        return prisma.infraction.delete({
+            where: { id }
+        });
+    }
 }
 
 module.exports = InfractionService; 

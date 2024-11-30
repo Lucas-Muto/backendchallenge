@@ -1,9 +1,19 @@
 const express = require("express");
 const router = express.Router();
-const { createInfraction, getInfractionsByTraveler } = require("../controllers/infractionController");
-const { validateCreateInfraction } = require("../middlewares/infractionValidations");
+const { 
+    createInfraction, 
+    getInfractionsByTraveler,
+    updateInfraction,
+    deleteInfraction 
+} = require("../controllers/infractionController");
+const { 
+    validateCreateInfraction, 
+    validateUpdateInfraction 
+} = require("../middlewares/infractionValidations");
 
 router.post("/", validateCreateInfraction, createInfraction);
 router.get("/:passportNumber", getInfractionsByTraveler);
+router.put("/:id", validateUpdateInfraction, updateInfraction);
+router.delete("/:id", deleteInfraction);
 
 module.exports = router;
