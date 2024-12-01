@@ -8,8 +8,8 @@ const {
 } = require("../controllers/infractionController");
 const { 
     validateCreateInfraction, 
-    validateUpdateInfraction 
-} = require("../middlewares/infractionValidations");
+    validateUpdateInfraction
+} = require("../middlewares");
 
 router.post("/", validateCreateInfraction, createInfraction);
 router.get("/:passportNumber", getInfractionsByTraveler);

@@ -1,5 +1,5 @@
 const request = require("supertest");
-const app = require("../index");
+const app = require("../app");
 const prisma = require("../prisma/client");
 const { dateUtils } = require("./setup");
 
@@ -19,7 +19,21 @@ beforeEach(() => {
 });
 
 describe("Traveler Controller Tests", () => {
-  describe("POST /travelers", () => {
+  let authToken;
+
+  beforeEach(async () => {
+    // Login to get auth token
+    const loginResponse = await request(app)
+      .post("/api/auth/login")
+      .send({
+        email: "test@inspector.com",
+        password: "123456"
+      });
+    
+    authToken = loginResponse.body.token;
+  });
+
+  describe("POST /api/travelers", () => {
     it("Deve criar um novo viajante com sucesso", async () => {
       const mockTraveler = {
         id: 1,
@@ -34,7 +48,8 @@ describe("Traveler Controller Tests", () => {
       prisma.traveler.findUnique.mockResolvedValue(mockTraveler);
 
       const response = await request(app)
-        .post("/travelers")
+        .post("/api/travelers")
+        .set("Authorization", `Bearer ${authToken}`)
         .send({
           name: "Lucas Moura",
           birthDate: "1990-01-01",
@@ -50,7 +65,8 @@ describe("Traveler Controller Tests", () => {
 
     it("Deve retornar erro se faltar campos obrigatórios", async () => {
       const response = await request(app)
-        .post("/travelers")
+        .post("/api/travelers")
+        .set("Authorization", `Bearer ${authToken}`)
         .send({
           name: "Lucas Moura",
         });
@@ -60,7 +76,7 @@ describe("Traveler Controller Tests", () => {
     });
   });
 
-  describe("GET /travelers/:passportNumber", () => {
+  describe("GET /api/travelers/:passportNumber", () => {
     it("Deve retornar os detalhes de um viajante existente", async () => {
       const mockTraveler = {
         name: "Pedro Silva",
@@ -70,7 +86,9 @@ describe("Traveler Controller Tests", () => {
 
       prisma.traveler.findUnique.mockResolvedValue(mockTraveler);
 
-      const response = await request(app).get("/travelers/54321");
+      const response = await request(app)
+        .get("/api/travelers/54321")
+        .set("Authorization", `Bearer ${authToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
@@ -82,14 +100,16 @@ describe("Traveler Controller Tests", () => {
     it("Deve retornar erro se o viajante não for encontrado", async () => {
       prisma.traveler.findUnique.mockResolvedValue(null);
 
-      const response = await request(app).get("/travelers/54321");
+      const response = await request(app)
+        .get("/api/travelers/54321")
+        .set("Authorization", `Bearer ${authToken}`);
 
       expect(response.status).toBe(404);
       expect(response.body.error).toBe("Viajante não encontrado.");
     });
   });
 
-  describe("POST /travelers/:passportNumber/validate", () => {
+  describe("POST /api/travelers/:passportNumber/validate", () => {
     it("Deve permitir que Hugo viaje pro passado um dia após o seu nascimento", async () => {
       const mockTraveler = {
         name: "Hugo",
@@ -120,7 +140,8 @@ describe("Traveler Controller Tests", () => {
       jest.setSystemTime(new Date("2035-07-06T00:00:00Z"));
 
       const response = await request(app)
-        .post("/travelers/66666/validate")
+        .post("/api/travelers/66666/validate")
+        .set("Authorization", `Bearer ${authToken}`)
         .send({
           endDate: "2000-07-06",
         });
@@ -164,7 +185,8 @@ describe("Traveler Controller Tests", () => {
       jest.setSystemTime(new Date("2024-11-28T00:00:00Z"));
 
       const response = await request(app)
-        .post("/travelers/77777/validate")
+        .post("/api/travelers/77777/validate")
+        .set("Authorization", `Bearer ${authToken}`)
         .send({
           endDate: "2027-12-05",
         });
@@ -186,7 +208,8 @@ describe("Traveler Controller Tests", () => {
       jest.setSystemTime(new Date("1999-05-06T00:00:00Z"));
 
       const response = await request(app)
-        .post("/travelers/33333/validate")
+        .post("/api/travelers/33333/validate")
+        .set("Authorization", `Bearer ${authToken}`)
         .send({
           endDate: "1979-05-06",
         });
@@ -223,7 +246,8 @@ describe("Traveler Controller Tests", () => {
       jest.setSystemTime(new Date("2001-01-01T00:00:00Z"));
 
       const response = await request(app)
-        .post("/travelers/99999/validate")
+        .post("/api/travelers/99999/validate")
+        .set("Authorization", `Bearer ${authToken}`)
         .send({
           endDate: "1996-01-01",
         });
@@ -260,7 +284,8 @@ describe("Traveler Controller Tests", () => {
       jest.setSystemTime(new Date("2003-02-05T00:00:00Z"));
 
       const response = await request(app)
-        .post("/travelers/98733/validate")
+        .post("/api/travelers/98733/validate")
+        .set("Authorization", `Bearer ${authToken}`)
         .send({
           endDate: "2026-01-02",
         });
@@ -297,7 +322,8 @@ describe("Traveler Controller Tests", () => {
       jest.setSystemTime(new Date("2024-11-28T00:00:00Z"));
 
       const response = await request(app)
-        .post("/travelers/90909/validate")
+        .post("/api/travelers/90909/validate")
+        .set("Authorization", `Bearer ${authToken}`)
         .send({
           endDate: "2032-11-07",
         });
@@ -334,7 +360,8 @@ describe("Traveler Controller Tests", () => {
       jest.setSystemTime(new Date("2024-11-28T00:00:00Z"));
 
       const response = await request(app)
-        .post("/travelers/80808/validate")
+        .post("/api/travelers/80808/validate")
+        .set("Authorization", `Bearer ${authToken}`)
         .send({
           endDate: "2050-07-11",
         });
@@ -377,7 +404,8 @@ describe("Traveler Controller Tests", () => {
       jest.setSystemTime(new Date("2024-11-28T00:00:00Z"));
 
       const response = await request(app)
-        .post("/travelers/50305/validate")
+        .post("/api/travelers/50305/validate")
+        .set("Authorization", `Bearer ${authToken}`)
         .send({
           endDate: "2050-07-11",
         });

@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const { mockDeep, mockReset } = require('jest-mock-extended');
 
-const prismaMock = mockDeep<PrismaClient>();
+const prismaMock = mockDeep();
 
 beforeEach(() => {
   mockReset(prismaMock);

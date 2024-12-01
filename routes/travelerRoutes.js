@@ -1,5 +1,4 @@
 const express = require("express");
-const router = express.Router();
 const { 
     createTraveler, 
     getTraveler, 
@@ -7,7 +6,9 @@ const {
     updateTraveler,
     deleteTraveler 
 } = require("../controllers/travelerController");
-const { validateCreateTraveler, validateTravelDates } = require("../middlewares/travelerValidations");
+const { validateCreateTraveler, validateTravelDates } = require("../middlewares");
+
+const router = express.Router();
 
 router.post("/", validateCreateTraveler, createTraveler);
 router.get("/:passportNumber", getTraveler);
