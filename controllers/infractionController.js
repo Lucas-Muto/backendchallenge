@@ -1,6 +1,6 @@
 const InfractionService = require("../services/infractionService");
 const { StatusCodes } = require('http-status-codes');
-
+const { PRISMA_NOT_FOUND_ERROR } = require('../utils/constants');
 const createInfraction = (req, res) => {
     const { description, passportNumber, dateTime, severity } = req.body;
     
@@ -41,7 +41,7 @@ const updateInfraction = async (req, res) => {
             infraction: updatedInfraction
         });
     } catch (error) {
-        if (error.code === 'P2025') {
+        if (error.code === PRISMA_NOT_FOUND_ERROR) {
             return res.status(StatusCodes.NOT_FOUND).json({ error: "Infração não encontrada." });
         }
         res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });
@@ -57,7 +57,7 @@ const deleteInfraction = async (req, res) => {
             message: "Infração removida com sucesso!"
         });
     } catch (error) {
-        if (error.code === 'P2025') {
+        if (error.code === PRISMA_NOT_FOUND_ERROR) {
             return res.status(StatusCodes.NOT_FOUND).json({ error: "Infração não encontrada." });
         }
         res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });

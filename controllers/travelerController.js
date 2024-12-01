@@ -1,18 +1,26 @@
 const TravelerService = require("../services/travelerService");
 const { StatusCodes } = require('http-status-codes');
 
+const { PRISMA_UNIQUE_CONSTRAINT_ERROR, PRISMA_NOT_FOUND_ERROR } = require('../utils/constants');
+
 const createTraveler = (req, res) => {
     const { name, birthDate, passportNumber } = req.body;
     
-    TravelerService.createTraveler(name, birthDate, passportNumber).then(traveler => {
-        res.status(StatusCodes.CREATED).json({ 
+    TravelerService.createTraveler(name, birthDate, passportNumber)
+        .then(traveler => {
+            res.status(StatusCodes.CREATED).json({ 
                 message: "Viajante criado com sucesso!", 
-                    traveler 
+                traveler 
             });
-        }).catch(error => {
+        })
+        .catch(error => {
+            if (error.code === PRISMA_UNIQUE_CONSTRAINT_ERROR) {
+                return res.status(StatusCodes.BAD_REQUEST).json({ 
+                    error: "Já existe um viajante com este número de passaporte." 
+                });
+            }
             res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });
         });
-    
 };
 
 const getTraveler = (req, res) => {
@@ -57,7 +65,7 @@ const updateTraveler = async (req, res) => {
             traveler: updatedTraveler
         });
     } catch (error) {
-        if (error.code === 'P2025') {
+        if (error.code === PRISMA_NOT_FOUND_ERROR) {
             return res.status(StatusCodes.NOT_FOUND).json({ error: "Viajante não encontrado." });
         }
         res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });
@@ -73,7 +81,7 @@ const deleteTraveler = async (req, res) => {
             message: "Viajante removido com sucesso!"
         });
     } catch (error) {
-        if (error.code === 'P2025') {
+        if (error.code === PRISMA_NOT_FOUND_ERROR) {
             return res.status(StatusCodes.NOT_FOUND).json({ error: "Viajante não encontrado." });
         }
         res.status(StatusCodes.BAD_REQUEST).json({ error: error.message });

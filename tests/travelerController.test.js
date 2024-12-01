@@ -71,6 +71,51 @@ describe("Traveler Controller Tests", () => {
       expect(response.status).toBe(400);
       expect(response.body.error).toBe("Todos os campos são necessários.");
     });
+
+    it("Não deve permitir criar um viajante com número de passaporte duplicado", async () => {
+      const mockTraveler = {
+        id: 1,
+        name: "Lucas Moura",
+        birthDate: new Date("1990-01-01"),
+        passportNumber: "12345",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+    
+      // First attempt - successful creation
+      prisma.traveler.create.mockResolvedValueOnce(mockTraveler);
+      
+      // Second attempt - simulate Prisma unique constraint error
+      prisma.traveler.create.mockRejectedValueOnce({
+        code: 'P2002',
+        message: 'Unique constraint violation'
+      });
+    
+      // First creation - should succeed
+      const firstResponse = await request(app)
+        .post("/api/travelers")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          name: "Lucas Moura",
+          birthDate: "1990-01-01",
+          passportNumber: "12345",
+        });
+    
+      expect(firstResponse.status).toBe(201);
+    
+      // Second creation with same passport - should fail
+      const secondResponse = await request(app)
+        .post("/api/travelers")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          name: "Another Name",
+          birthDate: "1995-01-01",
+          passportNumber: "12345",
+        });
+    
+      expect(secondResponse.status).toBe(400);
+      expect(secondResponse.body.error).toBe("Já existe um viajante com este número de passaporte.");
+    });
   });
 
   describe("GET /api/travelers/:passportNumber", () => {

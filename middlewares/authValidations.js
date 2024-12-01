@@ -21,4 +21,21 @@ const authenticateInspector = (req, res, next) => {
   }
 };
 
-module.exports = { authenticateInspector }; 
+const validateRegister = (req, res, next) => {
+  const { name, email, password } = req.body;
+  if (!name || !email || !password) {
+    return res.status(StatusCodes.BAD_REQUEST).json({ error: "Dados incompletos" });
+  }
+  next();
+};
+
+const validateLogin = (req, res, next) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(StatusCodes.BAD_REQUEST).json({ error: "Dados incompletos" });
+  }
+  next();
+};
+
+
+module.exports = { authenticateInspector, validateRegister, validateLogin }; 

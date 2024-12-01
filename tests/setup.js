@@ -1,6 +1,3 @@
-const { mockDeep, mockReset } = require('jest-mock-extended');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 
 const mockedPrisma = {
   traveler: {
