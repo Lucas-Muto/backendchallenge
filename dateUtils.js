@@ -1,4 +1,3 @@
-// Verifica se uma data está dentro dos últimos 12 meses
 // Verifica se uma data está dentro dos últimos 12 meses (sempre usando UTC)
   const isWithinLast12Months = (date) => {
 

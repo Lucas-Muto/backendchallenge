@@ -1,45 +1,32 @@
-const { PrismaClient } = require('@prisma/client');
-const { execSync } = require('child_process');
-const { v4: uuid } = require('uuid');
-const path = require('path');
+const { mockDeep, mockReset } = require('jest-mock-extended');
 
-const prismaBinary = path.join(__dirname, '..', 'node_modules', '.bin', 'prisma');
+const mockedPrisma = {
+  traveler: {
+    create: jest.fn(),
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+    createMany: jest.fn(),
+  },
+  infraction: {
+    create: jest.fn(),
+    findMany: jest.fn(),
+    deleteMany: jest.fn(),
+    createMany: jest.fn(),
+  },
+};
 
-const testUrl = process.env.DATABASE_URL;
+const dateUtils = {
+  isWithinLast12Months: jest.fn(),
+  conflictsWithPeriod: jest.fn()
+};
 
-beforeAll(async () => {
-  // Generate unique schema for concurrent test runs
-  const schema = `test_${uuid()}`;
-  
-  // Update DATABASE_URL with new schema
-  process.env.DATABASE_URL = `${testUrl}?schema=${schema}`;
+jest.mock('../prisma/client', () => mockedPrisma);
+jest.mock('../utils/dateUtils', () => dateUtils);
 
-  // Create database schema and run migrations
-  execSync(`"${prismaBinary}" db push --skip-generate`, {
-    env: {
-      ...process.env,
-      DATABASE_URL: process.env.DATABASE_URL,
-    },
-  });
-
-  jest.useFakeTimers("modern");
-});
-
-beforeEach(async () => {
-  // Clean database before each test
-  const prisma = new PrismaClient();
-  const tables = ['Infraction', 'Traveler'];
-  
-  for (const table of tables) {
-    await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${table}" CASCADE;`);
-  }
-  
-  await prisma.$disconnect();
-});
-
-afterAll(async () => {
-  // Clean up and disconnect
-  const prisma = new PrismaClient();
-  await prisma.$disconnect();
-  jest.useRealTimers();
-});
+module.exports = {
+  mockedPrisma,
+  dateUtils
+};

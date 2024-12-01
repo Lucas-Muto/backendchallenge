@@ -1,4 +1,5 @@
 const prisma = require('../prisma/client');
+const InfractionService = require('./infractionService');
 const dateUtils = require("../dateUtils");
 
 class TravelerService {
