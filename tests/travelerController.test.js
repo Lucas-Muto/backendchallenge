@@ -1,7 +1,6 @@
 const request = require("supertest");
 const app = require("../app");
 const prisma = require("../prisma/client");
-const { dateUtils } = require("./setup");
 
 // Global test setup
 beforeAll(() => {
@@ -14,8 +13,6 @@ afterAll(() => {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  dateUtils.isWithinLast12Months.mockReset();
-  dateUtils.conflictsWithPeriod.mockReset();
 });
 
 describe("Traveler Controller Tests", () => {
@@ -134,8 +131,6 @@ describe("Traveler Controller Tests", () => {
 
       prisma.traveler.findUnique.mockResolvedValue(mockTraveler);
       prisma.infraction.findMany.mockResolvedValue(mockInfractions);
-      dateUtils.isWithinLast12Months.mockReturnValue(false);
-      dateUtils.conflictsWithPeriod.mockReturnValue(false);
 
       jest.setSystemTime(new Date("2035-07-06T00:00:00Z"));
 
@@ -174,13 +169,7 @@ describe("Traveler Controller Tests", () => {
 
       prisma.traveler.findUnique.mockResolvedValue(mockTraveler);
       prisma.infraction.findMany.mockResolvedValue(mockInfractions);
-      dateUtils.isWithinLast12Months.mockImplementation(date => {
-        const compareDate = new Date("2024-11-28T00:00:00Z");
-        const twelveMonthsAgo = new Date(compareDate);
-        twelveMonthsAgo.setMonth(compareDate.getMonth() - 12);
-        return date >= twelveMonthsAgo;
-      });
-      dateUtils.conflictsWithPeriod.mockReturnValue(false);
+
 
       jest.setSystemTime(new Date("2024-11-28T00:00:00Z"));
 
@@ -356,6 +345,8 @@ describe("Traveler Controller Tests", () => {
 
       prisma.traveler.findUnique.mockResolvedValue(mockTraveler);
       prisma.infraction.findMany.mockResolvedValue(mockInfractions);
+
+
 
       jest.setSystemTime(new Date("2024-11-28T00:00:00Z"));
 

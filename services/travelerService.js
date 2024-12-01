@@ -1,6 +1,6 @@
 const prisma = require('../prisma/client');
 const InfractionService = require('./infractionService');
-const dateUtils = require("../dateUtils");
+const dateUtils = require("../utils/dateUtils");
 
 class TravelerService {
     static async findByPassport(passportNumber) {

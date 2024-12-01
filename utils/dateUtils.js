@@ -1,24 +1,24 @@
-function isWithinLast12Months(date) {
-    const now = new Date();
-    const twelveMonthsAgo = new Date(now);
-    twelveMonthsAgo.setMonth(now.getMonth() - 12);
-    return date >= twelveMonthsAgo;
-}
+// Verifica se uma data está dentro dos últimos 12 meses (sempre usando UTC)
+  const isWithinLast12Months = (date) => {
 
-function conflictsWithPeriod(infractionDate, travelDate) {
-    const infraction = new Date(infractionDate);
-    const travel = new Date(travelDate);
+    const now = new Date(); // Data atual no UTC
     
-    const oneYearBefore = new Date(travel);
-    oneYearBefore.setFullYear(travel.getFullYear() - 1);
-    
-    const oneYearAfter = new Date(travel);
-    oneYearAfter.setFullYear(travel.getFullYear() + 1);
-    
-    return infraction >= oneYearBefore && infraction <= oneYearAfter;
-}
+    const oneYearAgo = new Date(now); // Subtração de 1 ano em milissegundos
+    oneYearAgo.setUTCFullYear(now.getUTCFullYear() - 1);
 
-module.exports = {
-    isWithinLast12Months,
-    conflictsWithPeriod
-}; 
+    const givenDate = new Date(date); // Data fornecida convertida para UTC
+    oneYearAgo.setMilliseconds(0);
+    givenDate.setMilliseconds(0);
+
+    const withinLast12Months = givenDate >= oneYearAgo && givenDate <= now;
+   
+
+    return withinLast12Months; // Retorna true se a data for dentro dos últimos 12 meses
+};
+  
+
+  
+
+  // Exporta as funções para serem usadas em outros módulos
+  module.exports = { isWithinLast12Months };
+  

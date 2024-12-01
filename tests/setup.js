@@ -25,13 +25,9 @@ const mockedPrisma = {
   }
 };
 
-const dateUtils = {
-  isWithinLast12Months: jest.fn(),
-  conflictsWithPeriod: jest.fn()
-};
 
 jest.mock('../prisma/client', () => mockedPrisma);
-jest.mock('../utils/dateUtils', () => dateUtils);
+
 
 // Mock bcrypt
 jest.mock('bcryptjs', () => ({
@@ -49,6 +45,5 @@ jest.mock('jsonwebtoken', () => ({
 process.env.JWT_SECRET = 'test_secret';
 
 module.exports = {
-  mockedPrisma,
-  dateUtils
+  mockedPrisma
 };
