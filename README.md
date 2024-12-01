@@ -90,6 +90,22 @@ Este projeto é um sistema backend que gerencia viajantes e valida viagens no te
 6. **Logs de Utilização**: Registrar logs detalhados das operações realizadas no sistema.
 7. **Autenticação**: Implementar autenticação de usuários para fiscais.
 
+### Requisitos Não Funcionais
+
+1. **Segurança**:
+   - Senhas devem ser armazenadas de forma segura (hash)
+   - Autenticação via JWT
+   - Rotas protegidas para operações sensíveis
+2. **Qualidade**:
+   - Testes automatizados para as principais funcionalidades
+   - Código limpo e organizado
+3. **API**:
+   - Seguir padrões REST
+   - Respostas JSON bem estruturadas
+4. **Ambiente**:
+   - Compatibilidade com Node.js 18+
+   - Uso do PostgreSQL como banco de dadoss
+
 ## Dependências e Tecnologias
 
 ### Backend
