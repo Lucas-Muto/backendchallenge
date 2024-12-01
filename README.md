@@ -201,7 +201,7 @@ Permite o gerenciamento de usuários fiscais no sistema.
      - Sistema atualiza permissões
 
 ## Testes Automatizados
-O sistema inclui uma suíte completa de testes automatizados para garantir sua qualidade e funcionamento.
+O sistema inclui testes automatizados para garantir sua qualidade e funcionamento.
 
 ### Tipos de Testes
 1. **Testes de API**
