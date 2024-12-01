@@ -38,7 +38,7 @@ jest.mock('jsonwebtoken', () => ({
   verify: jest.fn().mockReturnValue({ id: 1, badge: 'TEST123' })
 }));
 
-// Add JWT_SECRET to process.env
+// Adicionar JWT_SECRET no process.env
 process.env.JWT_SECRET = 'test_secret';
 
 module.exports = {
