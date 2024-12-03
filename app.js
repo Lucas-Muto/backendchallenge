@@ -6,10 +6,10 @@ const app = express();
 // Middleware
 app.use(express.json());
 
-// Mount routes - notice we're using /api prefix
+// Monta as rotas 
 app.use('/api', routes);
 
-// Error handling middleware
+// Middleware de tratamento de erros
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something broke!' });

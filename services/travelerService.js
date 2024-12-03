@@ -92,12 +92,12 @@ class TravelerService {
     }
 
     static async deleteTraveler(passportNumber) {
-        // First delete related infractions
+        
         await prisma.infraction.deleteMany({
             where: { passportNumber }
         });
 
-        // Then delete the traveler
+        
         return prisma.traveler.delete({
             where: { passportNumber }
         });

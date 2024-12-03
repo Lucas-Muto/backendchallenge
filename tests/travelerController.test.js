@@ -19,7 +19,7 @@ describe("Traveler Controller Tests", () => {
   let authToken;
 
   beforeEach(async () => {
-    // Login to get auth token
+    // Login pra pegar a auth token
     const loginResponse = await request(app)
       .post("/api/auth/login")
       .send({
@@ -82,16 +82,16 @@ describe("Traveler Controller Tests", () => {
         updatedAt: new Date()
       };
     
-      // First attempt - successful creation
+      // Primeira tentativa - criação bem sucedida
       prisma.traveler.create.mockResolvedValueOnce(mockTraveler);
       
-      // Second attempt - simulate Prisma unique constraint error
+      // Segunda tentativa - simulação de erro de constraint única do Prisma
       prisma.traveler.create.mockRejectedValueOnce({
         code: 'P2002',
         message: 'Unique constraint violation'
       });
     
-      // First creation - should succeed
+      // Primeira criação - deve funcionar
       const firstResponse = await request(app)
         .post("/api/travelers")
         .set("Authorization", `Bearer ${authToken}`)
@@ -103,7 +103,7 @@ describe("Traveler Controller Tests", () => {
     
       expect(firstResponse.status).toBe(201);
     
-      // Second creation with same passport - should fail
+      // Segunda tentativa com o mesmo número de passaporte - deve falhar
       const secondResponse = await request(app)
         .post("/api/travelers")
         .set("Authorization", `Bearer ${authToken}`)
